@@ -1,17 +1,10 @@
 #pragma once
-// #include <array>
-// #include <cmath>
-// #include <cstdio>
 #include <iostream>
-// #include <chrono>
-// #include <numeric>
 #include <algorithm>
 #include <oneapi/tbb.h>
 #include <iterator>
 #include <execution>
 #include <x86intrin.h>
-
-using ElemntType = float;
 
 void tran(float* mat, float* matT, size_t in_w, size_t out_w) {
 // https://stackoverflow.com/questions/25622745/transpose-an-8x8-float-using-avx-avx2
@@ -124,7 +117,6 @@ void tran2(float* mat, float* matT, size_t in_w, size_t out_w) {
   _mm256_store_ps(&matT[7*out_w], r7);
 }
 
-// std::iterator_traits<Iter>::value_type
 
 namespace transpose{
 
