@@ -2,8 +2,8 @@
 #include <iostream>
 #include <oneapi/tbb.h>
 
-#define DATA_POLICY static
-#define TRANSPOSE_POLICY static
+#define DATA_POLICY dynamic
+#define TRANSPOSE_POLICY dynamic
 
 using DataPartitioner = oneapi::tbb::simple_partitioner;
 static DataPartitioner dataPart;
@@ -15,12 +15,12 @@ using InValType = float;
 
 #include "dataV2.hpp"
 #include "transpose.hpp"
-// #include "pad/pinningobserver.hpp"
+#include "pinningobserver.hpp"
 
 
 // constexpr size_t simd_width = 32;
 constexpr bool useSerInit = false;
-constexpr bool do_verify = true;
+constexpr bool do_verify = false;
 
 
 // bool floatEquals(double lhs, double rhs, double epsilon = 1e-5) {
@@ -31,9 +31,9 @@ static void BenchmarkArguments(benchmark::internal::Benchmark* b) {
 	const ssize_t lowerLimit = 15;
 	const ssize_t upperLimit = 15;
 
-	const ssize_t lowerGS = 64;
-	const ssize_t upperGS = 64;
-	for (auto j = lowerGS; j <= upperGS; j += 4)
+	const ssize_t lowerGS = 8;
+	const ssize_t upperGS = 300;
+	for (auto j = lowerGS; j <= upperGS; j += 8)
 	{	
 		for (auto i = lowerLimit; i <= upperLimit; ++i)
 		{
@@ -248,12 +248,42 @@ static void OMP_Tiled_AVX(benchmark::State& state){
 	delete data;
 }
 
+static void hwLoc(benchmark::State& state){
+
+	int thds_per_node = 32;
+	size_t size = (size_t) (state.range(0) * state.range(1)) / 4;
+
+	float **data_in = new float*[4];
+	float **data_out = new float*[4];
+
+	hwloc_topology_t topo;
+	hwloc_topology_init(&topo);
+	hwloc_topology_load(topo);
+
+	numa::alloc_mem_per_node(topo, data_in, data_out, size, state.range(0));
+	for (auto _ : state){
+		numa::alloc_thr_per_node(topo, data_in, data_out, size, thds_per_node, state.range(0), state.range(2));
+		benchmark::DoNotOptimize(data_out);
+		benchmark::ClobberMemory();
+	}
+	transposeCustomCounter(state);
+
+	for (int i = 0; i < 4; i++){
+		hwloc_free(topo, data_in[i], size);
+		hwloc_free(topo, data_out[i], size);
+	}
+	hwloc_topology_destroy(topo);
+	delete [] data_in;
+	delete [] data_out;
+}
+
 
 BENCHMARK(TBB)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond)->Iterations(10);
 BENCHMARK(TBB_OMP_SIMD)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond)->Iterations(10);
 BENCHMARK(TBB_AVX)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond)->Iterations(10);
+BENCHMARK(hwLoc)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond)->Iterations(10);
 
-BENCHMARK(OMP)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond)->Iterations(10);
+// BENCHMARK(OMP)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond)->Iterations(10);
 BENCHMARK(OMP_Tiled)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond)->Iterations(10);
 BENCHMARK(OMP_Tiled_SIMD)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond)->Iterations(10);
 BENCHMARK(OMP_Tiled_AVX)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond)->Iterations(10);

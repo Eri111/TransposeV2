@@ -16,5 +16,5 @@ target_include_directories(
 )
 target_link_libraries(
   pad
-  INTERFACE TBB::tbb Threads::Threads OpenMP::OpenMP_CXX
+  INTERFACE TBB::tbb Threads::Threads OpenMP::OpenMP_CXX hwloc
 )
