@@ -157,12 +157,13 @@ void verifyT(InIter inStart, CmpIter outStart, CmpIter outEnd, const size_t in_r
     }
 }
 
-template <class InIter, class OutIter>
-void stl_like(InIter inStart, InIter inEnd, OutIter outStart, const size_t in_rows){
+// doesn't work in parallel!
+template <class InIter, class OutIter, class ExecPolicy>
+void stl_like(InIter inStart, InIter inEnd, OutIter outStart, const size_t in_rows, ExecPolicy policy){
     const size_t in_columns = std::distance(inStart, inEnd) / in_rows;
     size_t i = 0;
     using InElemType = typename std::iterator_traits<InIter>::value_type;
-    std::for_each(inStart, inEnd, [&](InElemType &inElem){
+    std::for_each(policy, inStart, inEnd, [&](InElemType &inElem){
         *outStart = inElem;     
         i++;
         if(i % in_columns == 0)
@@ -177,22 +178,23 @@ void stl_like(InIter inStart, InIter inEnd, OutIter outStart, const size_t in_ro
     });
 }
 
-//serial implementation
-template <class inIter, class outIter1, class outIter2>
-void stl_likeCoalescedWrite(inIter inStart, outIter1 startIter, outIter2 endIter, size_t in_width){
+// doesn't work in parallel!
+template <class InIter, class OutIter>
+void stl_likeCoalescedWrite(InIter inStart, OutIter outStart, OutIter outEnd, const size_t in_rows){
+    const size_t in_columns = std::distance(outStart, outEnd) / in_rows;
     size_t i = 0;
-    size_t in_height = std::distance(startIter, endIter) / in_width;
-    std::for_each(startIter, endIter, [&](ElemntType &point){
-        point = *inStart;
+    using OutElemType = typename std::iterator_traits<OutIter>::value_type;
+    std::for_each(outStart, outEnd, [&](OutElemType &outElem){
+        outElem = *inStart;
         i++;
-        if(!(i % in_height))
+        if(!(i % in_rows))
         {
-            std::advance(inStart, -(in_height-1)*in_width);
+            std::advance(inStart, -(in_rows-1)*in_columns);
             ++inStart;
         }
         else
         {
-            std::advance(inStart, in_width);
+            std::advance(inStart, in_columns);
         }
         
     });

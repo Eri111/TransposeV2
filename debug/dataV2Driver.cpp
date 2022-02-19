@@ -40,10 +40,13 @@ int main(int argc, char const *argv[])
 
     // transpose::transposeSerial(beginA, beginB, endB, in_rows);
     // std::execution::par_unseq,
-    transpose::stl_like(beginA, endA, beginB, in_rows);
+    // transpose::stl_like(beginA, endA, beginB, in_rows, std::execution::seq);
+    // transpose::stl_like(beginA, endA, beginB, in_rows, std::execution::par);
+    transpose::stl_like(beginA, endA, beginB, in_rows, std::execution::par_unseq);
+    // transpose::stl_likeCoalescedWrite(beginA, beginB, endB, in_rows);
     // transpose::tbb(beginA, beginB, endB, in_rows, tilesize, transPart);
-    transpose::verifyT(beginA, beginB, endB, in_rows);
     dataTBB.printB();
+    transpose::verifyT(beginA, beginB, endB, in_rows);
 
     // std::cout << "Hello World";
     return 0;
