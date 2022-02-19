@@ -319,32 +319,32 @@ void tbb_coal_r(InIter inStart, OutIter outStart, OutIter outEnd, const size_t i
     );
 }
 
-template <class inIter, class outIter1, class outIter2>
-void openMP(inIter inStart, outIter1 startIter, outIter2 endIter, const size_t in_rows){
-    const size_t n_elem = std::distance(startIter, endIter); 
+template <class InIter, class OutIter>
+void openMP(InIter inStart, OutIter outStart, OutIter outEnd, const size_t in_rows){
+    const size_t n_elem = std::distance(outStart, outEnd); 
     const size_t in_columns = n_elem / in_rows;
 
-    #pragma omp parallel for schedule(static) /**collapse(2)**/
+    #pragma omp parallel for schedule(TRANSPOSE_POLICY) /**collapse(2)**/
     for(size_t y = 0; y < in_columns; y++){
         for(size_t x = 0; x < in_rows; ++x){
-            *(startIter + (y * in_rows + x)) = *(inStart + (x * in_columns + y));
+            *(outStart + (y * in_rows + x)) = *(inStart + (x * in_columns + y));
         }
     }
 }
 
-template <class inIter, class outIter1, class outIter2>
-void openMPTiled(inIter inStart, outIter1 startIter, outIter2 endIter, const size_t in_rows, const size_t blocksize){
-    const size_t n_elem = std::distance(startIter, endIter); 
+template <class InIter, class OutIter>
+void openMPTiled(InIter inStart, OutIter outStart, OutIter outEnd, const size_t in_rows, size_t blocksize){
+    const size_t n_elem = std::distance(outStart, outEnd); 
     const size_t in_columns = n_elem / in_rows;
     
     // calculate regular blocksize x blocksize blocks
-    #pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(TRANSPOSE_POLICY)
     for (size_t i = blocksize; i <= in_columns; i += blocksize) {                   // äußere Schleife von links nach rechts
         for (size_t j = blocksize; j <= in_rows; j += blocksize) {           // innere Schleife von oben nach unten durch matrix
             // transpose the block beginning at [i,j]
             for (size_t k = i - blocksize; k < i; ++k) {         //äußere Schleife von links nach rechts durch Block
                 for (size_t l = j - blocksize; l < j; ++l) {        //innere Schleife von oben nach unten durch Block
-                    *(startIter + (l + k * in_rows)) = *(inStart + (k + l * in_columns));
+                    *(outStart + (l + k * in_rows)) = *(inStart + (k + l * in_columns));
                 }
             }
         }
@@ -357,35 +357,35 @@ void openMPTiled(inIter inStart, outIter1 startIter, outIter2 endIter, const siz
     size_t restStartR = in_rows - restRows;
 
     // calculate rest at North East (input)
-    #pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(TRANSPOSE_POLICY)
     for (size_t i = restStartC; i < in_columns; ++i) {                   
         for (size_t j = 0; j < in_rows; ++j) {           
-            *(startIter + (j + i * in_rows)) = *(inStart + (i + j * in_columns));
+            *(outStart + (j + i * in_rows)) = *(inStart + (i + j * in_columns));
         }
     }
 
     // calculate rest at South West (input)
-    #pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(TRANSPOSE_POLICY)
     for (size_t i = 0; i < restStartC; ++i) {                   
         for (size_t j = restStartR; j < in_rows; ++j) {          
-            *(startIter + (j + i * in_rows)) = *(inStart + (i + j * in_columns));
+            *(outStart + (j + i * in_rows)) = *(inStart + (i + j * in_columns));
         }
     }
 }
 
-template <class inIter, class outIter1, class outIter2>
-void openMPSIMD(inIter inStart, outIter1 startIter, outIter2 endIter, const size_t in_rows, const size_t blocksize){
-    const size_t n_elem = std::distance(startIter, endIter); 
+template <class InIter, class OutIter>
+void openMPSIMD(InIter inStart, OutIter outStart, OutIter outEnd, const size_t in_rows, size_t blocksize){
+    const size_t n_elem = std::distance(outStart, outEnd); 
     const size_t in_columns = n_elem / in_rows;
     
-    #pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(TRANSPOSE_POLICY)
     for (size_t i = blocksize; i <= in_columns; i += blocksize) {            // äußere Schleife von links nach rechts
         for (size_t j = blocksize; j <= in_rows; j += blocksize) {           // innere Schleife von oben nach unten durch matrix
             // transpose the block beginning at [i,j]
             for (size_t k = i-blocksize; k < i; ++k) {         //äußere Schleife von links nach rechts durch Block
                 #pragma omp simd            
                 for (size_t l = j-blocksize; l < j; ++l) {        //innere Schleife von oben nach unten durch Block
-                    *(startIter + (l + k * in_rows)) = *(inStart + (k + l * in_columns));
+                    *(outStart + (l + k * in_rows)) = *(inStart + (k + l * in_columns));
                 }
             }
         }
@@ -398,36 +398,37 @@ void openMPSIMD(inIter inStart, outIter1 startIter, outIter2 endIter, const size
     size_t restStartR = in_rows - restRows;
 
     // calculate rest at North East (input)
-    #pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(TRANSPOSE_POLICY)
     for (size_t i = restStartC; i < in_columns; ++i) {                   
         for (size_t j = 0; j < in_rows; ++j) {           
-            *(startIter + (j + i * in_rows)) = *(inStart + (i + j * in_columns));
+            *(outStart + (j + i * in_rows)) = *(inStart + (i + j * in_columns));
         }
     }
 
     // calculate rest at South West (input)
-    #pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(TRANSPOSE_POLICY)
     for (size_t i = 0; i < restStartC; ++i) {                   
         for (size_t j = restStartR; j < in_rows; ++j) {          
-            *(startIter + (j + i * in_rows)) = *(inStart + (i + j * in_columns));
+            *(outStart + (j + i * in_rows)) = *(inStart + (i + j * in_columns));
         }
     }
 }
 
-template <ssize_t simd_width, class inIter, class outIter1, class outIter2>
-void openMPIntrin(inIter inStart, outIter1 startIter, outIter2 endIter, const size_t in_rows, const size_t blocksize){
+// only blocksizes that are a multiple of 8 are allowed
+template <class InIter, class OutIter>
+void openMPIntrin(InIter inStart, OutIter outStart, OutIter outEnd, const size_t in_rows, size_t blocksize){
     //blocksize can only be a multiple of 8
-    const size_t n_elem = std::distance(startIter, endIter); 
+    const size_t n_elem = std::distance(outStart, outEnd); 
     const size_t in_columns = n_elem / in_rows;
     
-    #pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(TRANSPOSE_POLICY)
     for (size_t i = blocksize; i <= in_columns; i += blocksize) {                   // äußere Schleife von links nach rechts
         for (size_t j = blocksize; j <= in_rows; j += blocksize) {           // innere Schleife von oben nach unten durch matrix
             for (size_t k = i-blocksize; k < i; k+=8)
             {
                 for (size_t l = j-blocksize; l < j; l+=8)
                 {
-                    tran(&(*(inStart + (k + l * in_columns))), &(*(startIter + (l + k * in_rows))), in_columns, in_rows);
+                    tran(&(*(inStart + (k + l * in_columns))), &(*(outStart + (l + k * in_rows))), in_columns, in_rows);
                 }
                 
             }           
@@ -441,82 +442,82 @@ void openMPIntrin(inIter inStart, outIter1 startIter, outIter2 endIter, const si
     size_t restStartR = in_rows - restRows;
 
     // calculate rest at North East (input)
-    #pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(TRANSPOSE_POLICY)
     for (size_t i = restStartC; i < in_columns; ++i) {                   
         for (size_t j = 0; j < in_rows; ++j) {           
-            *(startIter + (j + i * in_rows)) = *(inStart + (i + j * in_columns));
+            *(outStart + (j + i * in_rows)) = *(inStart + (i + j * in_columns));
         }
     }
 
     // calculate rest at South West (input)
-    #pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(TRANSPOSE_POLICY)
     for (size_t i = 0; i < restStartC; ++i) {                   
         for (size_t j = restStartR; j < in_rows; ++j) {          
-            *(startIter + (j + i * in_rows)) = *(inStart + (i + j * in_columns));
+            *(outStart + (j + i * in_rows)) = *(inStart + (i + j * in_columns));
         }
     }
 }
 
 
 
-template <class Iter1, class Iter2, class OutIter>
-void simple_cp(Iter1 inBegin, Iter2 inEnd, OutIter outBegin){
-    int len = std::distance(inBegin, inEnd);
-    #pragma omp parallel for schedule(static)
-	for (size_t i = 0; i < len; ++i)
-	{
-		*(outBegin + i) = *(inBegin + i);
-	}
-}
+// template <class Iter1, class Iter2, class OutIter>
+// void simple_cp(Iter1 inBegin, Iter2 inEnd, OutIter outBegin){
+//     int len = std::distance(inBegin, inEnd);
+//     #pragma omp parallel for schedule(static)
+// 	for (size_t i = 0; i < len; ++i)
+// 	{
+// 		*(outBegin + i) = *(inBegin + i);
+// 	}
+// }
 
-template <class Iter1, class Iter2, class OutIter>
-void matrix_cp(Iter1 inBegin, Iter2 inEnd, OutIter outBegin, size_t in_rows, char flag){
-    const size_t n_elem = std::distance(inBegin, inEnd);
-    const size_t in_columns = n_elem / in_rows;
-    const size_t out_columns = in_rows;
+// template <class Iter1, class Iter2, class OutIter>
+// void matrix_cp(Iter1 inBegin, Iter2 inEnd, OutIter outBegin, size_t in_rows, char flag){
+//     const size_t n_elem = std::distance(inBegin, inEnd);
+//     const size_t in_columns = n_elem / in_rows;
+//     const size_t out_columns = in_rows;
 
-    switch (flag)
-    {
-    case 'S': // copy Matrix with row-stride
-        #pragma omp parallel for schedule(static)
-        for(size_t x = 0; x < in_columns; ++x){
-            for(size_t y = 0; y < in_rows; ++y){
-                *(outBegin + (y * in_columns + x)) = *(inBegin + (y * in_columns + x));
-            }
-        }
-        break;
+//     switch (flag)
+//     {
+//     case 'S': // copy Matrix with row-stride
+//         #pragma omp parallel for schedule(static)
+//         for(size_t x = 0; x < in_columns; ++x){
+//             for(size_t y = 0; y < in_rows; ++y){
+//                 *(outBegin + (y * in_columns + x)) = *(inBegin + (y * in_columns + x));
+//             }
+//         }
+//         break;
 
-    case 'C': // copy Matrix
-        #pragma omp parallel for schedule(static)
-        for(size_t y = 0; y < in_rows; ++y){
-            for(size_t x = 0; x < in_columns; ++x){
-                *(outBegin + (y * in_columns + x)) = *(inBegin + (y * in_columns + x));
-            }
-        }
-        break;
+//     case 'C': // copy Matrix
+//         #pragma omp parallel for schedule(static)
+//         for(size_t y = 0; y < in_rows; ++y){
+//             for(size_t x = 0; x < in_columns; ++x){
+//                 *(outBegin + (y * in_columns + x)) = *(inBegin + (y * in_columns + x));
+//             }
+//         }
+//         break;
 
-    case 'T': // transpose coalescing read Matrix
-        #pragma omp parallel for schedule(static)
-        for(size_t y = 0; y < in_rows; ++y){
-            for(size_t x = 0; x < in_columns; ++x){
-                *(outBegin + (x * out_columns + y)) = *(inBegin + (y * in_columns + x));
-            }
-        }
-        break;
+//     case 'T': // transpose coalescing read Matrix
+//         #pragma omp parallel for schedule(static)
+//         for(size_t y = 0; y < in_rows; ++y){
+//             for(size_t x = 0; x < in_columns; ++x){
+//                 *(outBegin + (x * out_columns + y)) = *(inBegin + (y * in_columns + x));
+//             }
+//         }
+//         break;
 
-    case 't': // transpose coalescing write Matrix
-        #pragma omp parallel for schedule(static)
-        for(size_t x = 0; x < in_columns; ++x){
-            for(size_t y = 0; y < in_rows; ++y){
-                *(outBegin + (x * out_columns + y)) = *(inBegin + (y * in_columns + x));
-            }
-        }
-        break;
+//     case 't': // transpose coalescing write Matrix
+//         #pragma omp parallel for schedule(static)
+//         for(size_t x = 0; x < in_columns; ++x){
+//             for(size_t y = 0; y < in_rows; ++y){
+//                 *(outBegin + (x * out_columns + y)) = *(inBegin + (y * in_columns + x));
+//             }
+//         }
+//         break;
     
-    default:
-        break;
-    }
+//     default:
+//         break;
+//     }
 
-}
+// }
 
 }

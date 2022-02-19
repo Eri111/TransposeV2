@@ -15,9 +15,9 @@ using InValType = float;
 #include "dataV2.hpp"
 #include "transpose.hpp"
 
-static const size_t in_rows = 16;
+static const size_t in_rows = 17;
 static const size_t in_cols = 15;
-static const size_t tilesize = 8;
+static const size_t tile_width = 8;
 
 int main(int argc, char const *argv[])
 {
@@ -25,18 +25,19 @@ int main(int argc, char const *argv[])
     // dataS.printA();
     // dataS.printB();
 
-    // pad::arrayDataV2<InValType> dataOMP(11, 13, 4, "OMP");
-    // dataOMP.printA();
-    // dataOMP.printB();
-
-    pad::arrayDataV2<InValType> dataTBB(in_rows, in_cols, tilesize, "TBB", dataPart);
-    dataTBB.printA();
+    pad::arrayDataV2<InValType> dataOMP(in_rows, in_cols, tile_width, "OMP");
+    dataOMP.printA();
     
 
-    auto iterators = dataTBB.get_range();
+    // pad::arrayDataV2<InValType> dataTBB(in_rows, in_cols, tile_width, "TBB", dataPart);
+    // dataTBB.printA();
+    // dataTBB.printB();
+    
+
+    auto iterators = dataOMP.get_range();
     auto [beginA, endA] = std::get<0>(iterators);
     auto [beginB, endB] = std::get<1>(iterators);
-    auto [dataA, dataB] = dataTBB.get_ptr();
+    auto [dataA, dataB] = dataOMP.get_ptr();
 
     // transpose::transposeSerial(beginA, beginB, endB, in_rows);
     // std::execution::par_unseq,
@@ -44,11 +45,17 @@ int main(int argc, char const *argv[])
     // transpose::stl_like(beginA, endA, beginB, in_rows, std::execution::par);
     // transpose::stl_like(beginA, endA, beginB, in_rows, std::execution::par_unseq);
     // transpose::stl_likeCoalescedWrite(beginA, beginB, endB, in_rows);
-    // transpose::tbb(beginA, beginB, endB, in_rows, tilesize, transPart);
-    // transpose::tbbSIMD(beginA, beginB, endB, in_rows, tilesize, transPart);
-    // transpose::tbbIntrin(beginA, beginB, endB, in_rows, tilesize, transPart);
-    transpose::tbb_coal_r(beginA, beginB, endB, in_rows, tilesize, transPart);
-    dataTBB.printB();
+    // transpose::tbb(beginA, beginB, endB, in_rows, tile_width, transPart);
+    // transpose::tbbSIMD(beginA, beginB, endB, in_rows, tile_width, transPart);
+    // transpose::tbbIntrin(beginA, beginB, endB, in_rows, tile_width, transPart);
+    // transpose::tbb_coal_r(beginA, beginB, endB, in_rows, tile_width, transPart);
+
+    // transpose::openMP(beginA, beginB, endB, in_rows);
+    // transpose::openMPTiled(beginA, beginB, endB, in_rows, tile_width);
+    // transpose::openMPSIMD(beginA, beginB, endB, in_rows, tile_width);
+    transpose::openMPIntrin(beginA, beginB, endB, in_rows, tile_width);
+
+    dataOMP.printB();
     transpose::verifyT(beginA, beginB, endB, in_rows);
 
     // std::cout << "Hello World";
