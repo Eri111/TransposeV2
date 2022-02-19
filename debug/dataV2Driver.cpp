@@ -15,9 +15,9 @@ using InValType = float;
 #include "dataV2.hpp"
 #include "transpose.hpp"
 
-static const size_t in_rows = 7;
-static const size_t in_cols = 5;
-static const size_t tilesize = 4;
+static const size_t in_rows = 16;
+static const size_t in_cols = 15;
+static const size_t tilesize = 8;
 
 int main(int argc, char const *argv[])
 {
@@ -42,9 +42,12 @@ int main(int argc, char const *argv[])
     // std::execution::par_unseq,
     // transpose::stl_like(beginA, endA, beginB, in_rows, std::execution::seq);
     // transpose::stl_like(beginA, endA, beginB, in_rows, std::execution::par);
-    transpose::stl_like(beginA, endA, beginB, in_rows, std::execution::par_unseq);
+    // transpose::stl_like(beginA, endA, beginB, in_rows, std::execution::par_unseq);
     // transpose::stl_likeCoalescedWrite(beginA, beginB, endB, in_rows);
     // transpose::tbb(beginA, beginB, endB, in_rows, tilesize, transPart);
+    // transpose::tbbSIMD(beginA, beginB, endB, in_rows, tilesize, transPart);
+    // transpose::tbbIntrin(beginA, beginB, endB, in_rows, tilesize, transPart);
+    transpose::tbb_coal_r(beginA, beginB, endB, in_rows, tilesize, transPart);
     dataTBB.printB();
     transpose::verifyT(beginA, beginB, endB, in_rows);
 

@@ -224,13 +224,13 @@ void obliviousTranspose(int N, int ib, int ie, int jb, int je, type *a, type *b,
 }
 
 template <class InIter, class OutIter, class Partitioner>
-void tbb(InIter inStart, OutIter outStart, OutIter outEnd, const size_t in_rows, const size_t gs, Partitioner& part){
+void tbb(InIter inStart, OutIter outStart, OutIter outEnd, const size_t in_rows, size_t gs, Partitioner& part){
     const size_t n_elem = std::distance(outStart, outEnd); 
     const size_t in_columns = n_elem / in_rows;
     
     oneapi::tbb::parallel_for(
-            oneapi::tbb::blocked_range2d<size_t>(0, in_rows, gs, 0, in_columns, gs),
-            [&](oneapi::tbb::blocked_range2d<size_t> r){
+        oneapi::tbb::blocked_range2d<size_t>(0, in_rows, gs, 0, in_columns, gs),
+        [&](oneapi::tbb::blocked_range2d<size_t> r){
         // transpose subblock of range2d
         for(size_t x = r.cols().begin(); x < r.cols().end(); ++x){
             for(size_t y = r.rows().begin(); y < r.rows().end(); ++y){
@@ -241,29 +241,34 @@ void tbb(InIter inStart, OutIter outStart, OutIter outEnd, const size_t in_rows,
     );
 }
 
-template <class inIter, class outIter1, class outIter2, class partitioner>
-void tbbSIMD(inIter inStart, outIter1 startIter, outIter2 endIter, size_t in_rows, size_t gs, partitioner& part){
-    const size_t n_elem = std::distance(startIter, endIter); 
+template <class InIter, class OutIter, class Partitioner>
+void tbbSIMD(InIter inStart, OutIter outStart, OutIter outEnd, const size_t in_rows, size_t gs, Partitioner& part){
+    const size_t n_elem = std::distance(outStart, outEnd); 
     const size_t in_columns = n_elem / in_rows;
 
-    tbb::parallel_for(tbb::blocked_range2d<size_t>(0, in_rows, gs, 0, in_columns, gs), [&](tbb::blocked_range2d<size_t> r){
+    oneapi::tbb::parallel_for(
+        oneapi::tbb::blocked_range2d<size_t>(0, in_rows, gs, 0, in_columns, gs),
+        [&](oneapi::tbb::blocked_range2d<size_t> r){
         // transpose subblock of range2d
         for(size_t x = r.cols().begin(); x < r.cols().end(); ++x){
             #pragma omp simd
             for(size_t y = r.rows().begin(); y < r.rows().end(); ++y){
-                *(startIter + (x * in_rows + y)) = *(inStart + (y * in_columns + x));
+                *(outStart + (x * in_rows + y)) = *(inStart + (y * in_columns + x));
             }
         }
     },part
     );
 }
 
-template <class inIter, class outIter1, class outIter2, class partitioner>
-void tbbIntrin(inIter inStart, outIter1 startIter, outIter2 endIter, size_t in_rows, size_t gs, partitioner& part){
-    const size_t n_elem = std::distance(startIter, endIter); 
+template <class InIter, class OutIter, class Partitioner>
+void tbbIntrin(InIter inStart, OutIter outStart, OutIter outEnd, const size_t in_rows, size_t gs, Partitioner& part){
+    const size_t n_elem = std::distance(outStart, outEnd); 
     const size_t in_columns = n_elem / in_rows;
 
-    tbb::parallel_for(tbb::blocked_range2d<size_t>(0, in_rows, gs, 0, in_columns, gs), [&](tbb::blocked_range2d<size_t> r){
+    oneapi::tbb::parallel_for(
+        oneapi::tbb::blocked_range2d<size_t>(0, in_rows, gs, 0, in_columns, gs),
+        [&](oneapi::tbb::blocked_range2d<size_t> r){
+            
         size_t distRows = r.rows().end() - r.rows().begin();
         size_t distCols = r.cols().end() - r.cols().begin();
         size_t restRows = distRows % 8;
@@ -274,21 +279,21 @@ void tbbIntrin(inIter inStart, outIter1 startIter, outIter2 endIter, size_t in_r
         // transpose regular 8x8 blocks
         for(size_t x = r.cols().begin(); x + 8 <= r.cols().end(); x+=8){
             for(size_t y = r.rows().begin(); y + 8 <= r.rows().end(); y+=8){            // y+8 < rows.end beacause we transpose 8x8 block in one iteration
-                tran(&(*(inStart + (x + y * in_columns))), &(*(startIter + (y + x * in_rows))), in_columns, in_rows);
+                tran(&(*(inStart + (x + y * in_columns))), &(*(outStart + (y + x * in_rows))), in_columns, in_rows);
             }
         }
 
         // transpose rest at North East
         for(size_t x = restStartC; x < r.cols().end(); ++x){
             for(size_t y = 0; y < r.rows().end(); ++y){
-                *(startIter + (x * in_rows + y)) = *(inStart + (y * in_columns + x));
+                *(outStart + (x * in_rows + y)) = *(inStart + (y * in_columns + x));
             }
         }
 
         // transpose rest at South West
         for(size_t x = 0; x < restStartC; ++x){
             for(size_t y = restStartR; y < r.rows().end(); ++y){
-                *(startIter + (x * in_rows + y)) = *(inStart + (y * in_columns + x));
+                *(outStart + (x * in_rows + y)) = *(inStart + (y * in_columns + x));
             }
         }
     },part
@@ -296,16 +301,18 @@ void tbbIntrin(inIter inStart, outIter1 startIter, outIter2 endIter, size_t in_r
     
 }
 
-template <class inIter, class outIter1, class outIter2, class partitioner>
-void tbb_coal_r(inIter inStart, outIter1 startIter, outIter2 endIter, size_t in_rows, size_t gs, partitioner& part){
-    const size_t n_elem = std::distance(startIter, endIter); 
+template <class InIter, class OutIter, class Partitioner>
+void tbb_coal_r(InIter inStart, OutIter outStart, OutIter outEnd, const size_t in_rows, size_t gs, Partitioner& part){
+    const size_t n_elem = std::distance(outStart, outEnd); 
     const size_t in_columns = n_elem / in_rows;
 
-    tbb::parallel_for(tbb::blocked_range2d<size_t>(0, in_rows, gs, 0, in_columns, gs), [&](tbb::blocked_range2d<size_t> r){
+    oneapi::tbb::parallel_for(
+        oneapi::tbb::blocked_range2d<size_t>(0, in_rows, gs, 0, in_columns, gs),
+        [&](oneapi::tbb::blocked_range2d<size_t> r){
         // transpose subblock of range2d
         for(size_t y = r.rows().begin(); y < r.rows().end(); ++y){
             for(size_t x = r.cols().begin(); x < r.cols().end(); ++x){
-                *(startIter + (x * in_rows + y)) = *(inStart + (y * in_columns + x));
+                *(outStart + (x * in_rows + y)) = *(inStart + (y * in_columns + x));
             }
         }
     },part
