@@ -1,17 +1,12 @@
 #pragma once
-#include <array>
-#include <cmath>
-#include <cstdio>
+// #include <array>
+// #include <cmath>
+// #include <cstdio>
 #include <iostream>
-#include <chrono>
-#include <vector>
-#include <numeric>
+// #include <chrono>
+// #include <numeric>
 #include <algorithm>
 #include <oneapi/tbb.h>
-// #include <tbb/parallel_for.h>
-// #include <tbb/parallel_reduce.h>
-// #include <tbb/blocked_range.h>
-// #include <tbb/blocked_range2d.h>
 #include <iterator>
 #include <execution>
 #include <x86intrin.h>
@@ -162,21 +157,22 @@ void verifyT(InIter inStart, CmpIter outStart, CmpIter outEnd, const size_t in_r
     }
 }
 
-template <class Iter1, class Iter2, class OutIter>
-void stl_like(Iter1 startIter, Iter2 endIter, OutIter outStart, size_t width){
+template <class InIter, class OutIter>
+void stl_like(InIter inStart, InIter inEnd, OutIter outStart, const size_t in_rows){
+    const size_t in_columns = std::distance(inStart, inEnd) / in_rows;
     size_t i = 0;
-    size_t height = std::distance(startIter, endIter) / width;
-    std::for_each(startIter, endIter, [&](ElemntType const &point){
-        *outStart = point;     
+    using InElemType = typename std::iterator_traits<InIter>::value_type;
+    std::for_each(inStart, inEnd, [&](InElemType &inElem){
+        *outStart = inElem;     
         i++;
-        if(!(i % width))
+        if(i % in_columns == 0)
         {
-            std::advance(outStart, -(width-1)*height);  // jump back into first row
-            ++outStart;                                 // incrase column by 1
+            std::advance(outStart, -(in_columns-1)*in_rows);  // jump back into first row
+            ++outStart;                                       // incrase column by 1
         }
         else
         {
-            std::advance(outStart, height);
+            std::advance(outStart, in_rows);        // step down a row in the Output Matrix
         }
     });
 }

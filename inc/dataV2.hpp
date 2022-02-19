@@ -1,5 +1,6 @@
 #pragma once
 #include <oneapi/tbb.h>
+#include <vector>
 #include <memory>
 #include <string.h>
 #include <iomanip>
