@@ -53,10 +53,11 @@ int main(int argc, char const *argv[])
     // transpose::openMP(beginA, beginB, endB, in_rows);
     // transpose::openMPTiled(beginA, beginB, endB, in_rows, tile_width);
     // transpose::openMPSIMD(beginA, beginB, endB, in_rows, tile_width);
-    transpose::openMPIntrin(beginA, beginB, endB, in_rows, tile_width);
+    // transpose::openMPIntrin(beginA, beginB, endB, in_rows, tile_width);
 
     dataOMP.printB();
-    transpose::verifyT(beginA, beginB, endB, in_rows);
+    // transpose::verifyT(beginA, beginB, endB, in_rows);
+    transpose::verifyPar(beginA, beginB, endB, in_rows);
 
     // std::cout << "Hello World";
     return 0;

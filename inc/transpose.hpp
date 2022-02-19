@@ -157,6 +157,31 @@ void verifyT(InIter inStart, CmpIter outStart, CmpIter outEnd, const size_t in_r
     }
 }
 
+// Parallel verify
+template <class InIter, class CmpIter>
+void verifyPar(InIter inStart, CmpIter outStart, CmpIter outEnd, const size_t in_rows){
+    const size_t n_elem = std::distance(outStart, outEnd); 
+    const size_t in_columns = n_elem / in_rows;
+    oneapi::tbb::simple_partitioner part;
+
+    oneapi::tbb::parallel_for(
+        oneapi::tbb::blocked_range2d<size_t>(0, in_rows, 64, 0, in_columns, 64),
+        [&](oneapi::tbb::blocked_range2d<size_t> r){
+        // transpose subblock of range2d
+        for(size_t x = r.cols().begin(); x < r.cols().end(); ++x){
+            for(size_t y = r.rows().begin(); y < r.rows().end(); ++y){
+                if(*(outStart + (x * in_rows + y)) != *(inStart + (y * in_columns + x))){
+                    std::cout << "row=" << y << ", column=" << x
+                            << ", expected=" << *(inStart + (y * in_columns + x))
+                            << ", actual=" << *(outStart + (x * in_rows + y)) << std::endl;
+                    throw std::runtime_error("wrong results");
+                }
+            }
+        }
+    },part
+    );
+}
+
 // doesn't work in parallel!
 template <class InIter, class OutIter, class ExecPolicy>
 void stl_like(InIter inStart, InIter inEnd, OutIter outStart, const size_t in_rows, ExecPolicy policy){

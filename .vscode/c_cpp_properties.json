@@ -4,7 +4,8 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/opt/asc/pub/epochs/2020/spack/opt/spack/linux-centos7-x86_64/gcc-11.1.0/intel-oneapi-tbb-2021.4.0-ybehmztrojbbxdrcekumvx2yjczgmeb5/tbb/2021.4.0/include"
+                "/opt/asc/pub/epochs/2020/spack/opt/spack/linux-centos7-x86_64/gcc-11.1.0/intel-oneapi-tbb-2021.4.0-ybehmztrojbbxdrcekumvx2yjczgmeb5/tbb/2021.4.0/include",
+                "/opt/asc/pub/epochs/2020/spack/opt/spack/linux-centos7-x86_64/gcc-10.2.0/benchmark-1.5.0-l3jaj4ean7hpslinduxvoy4zvftlgm5h/include"
             ],
             "defines": [],
             "compilerPath": "/opt/asc/pub/epochs/2020/spack/opt/spack/linux-centos7-x86_64/gcc-10.2.0/gcc-11.1.0-aab36y7l6spjdenoajgtcb62dgaesomc/bin/gcc",
