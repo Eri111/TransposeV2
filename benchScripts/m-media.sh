@@ -4,4 +4,4 @@
 #SBATCH --exclusive
 
 
-../build/memory-benchmark-media --benchmark_out_format=json --benchmark_out=../results/media/test.json
+./memory-benchmark-media --benchmark_out_format=json --benchmark_out=../results/media/test.json

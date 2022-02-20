@@ -5,6 +5,7 @@
 #include <iterator>
 #include <execution>
 #include <x86intrin.h>
+#include "iterator.hpp"
 
 void tran(float* mat, float* matT, size_t in_w, size_t out_w) {
 // https://stackoverflow.com/questions/25622745/transpose-an-8x8-float-using-avx-avx2
@@ -172,6 +173,38 @@ void verifyPar(InIter inStart, CmpIter outStart, CmpIter outEnd, const size_t in
         }
     },part
     );
+}
+
+// stl version with contiguous read (parallel exec possible)
+template <class InIter, class OutIter, class ExecPolicy>
+void stl_each_cr(InIter inStart, InIter inEnd, OutIter outStart, const size_t in_rows, ExecPolicy policy){
+    const size_t len = std::distance(inStart, inEnd);
+    const size_t in_columns = len / in_rows;
+
+    pad::Arith_Iterator startIndexIn(0, [](ssize_t idx) { return idx; });
+    pad::Arith_Iterator endIndexIn = startIndexIn + len;
+
+    std::for_each(policy, startIndexIn, endIndexIn, [=](auto counter){
+        size_t rowIn = counter/in_columns;
+        size_t colIn = counter%in_columns;
+        *(outStart + (colIn * in_rows + rowIn)) = *(inStart + (rowIn * in_columns + colIn));
+    });
+}
+
+// stl version with contiguous write (parallel exec possible)
+template <class InIter, class OutIter, class ExecPolicy>
+void stl_each_cw(InIter inStart, InIter inEnd, OutIter outStart, const size_t in_rows, ExecPolicy policy){
+    const size_t len = std::distance(inStart, inEnd);
+    const size_t in_columns = len / in_rows;
+
+    pad::Arith_Iterator startIndexIn(0, [](ssize_t idx) { return idx; });
+    pad::Arith_Iterator endIndexIn = startIndexIn + len;
+
+    std::for_each(policy, startIndexIn, endIndexIn, [=](auto counter){
+        size_t colIn = counter/in_rows;
+        size_t rowIn = counter%in_rows;
+        *(outStart + (colIn * in_rows + rowIn)) = *(inStart + (rowIn * in_columns + colIn));
+    });
 }
 
 // doesn't work in parallel!

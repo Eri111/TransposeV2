@@ -2,8 +2,8 @@
 #include <iostream>
 #include <oneapi/tbb.h>
 
-#define DATA_POLICY dynamic
-#define TRANSPOSE_POLICY dynamic
+#define DATA_POLICY static
+#define TRANSPOSE_POLICY static
 
 using DataPartitioner = oneapi::tbb::simple_partitioner;
 static DataPartitioner dataPart;
@@ -28,8 +28,8 @@ constexpr bool do_verify = false;
 // }
 
 static void BenchmarkArguments(benchmark::internal::Benchmark* b) {
-	const ssize_t lowerLimit = 15;
-	const ssize_t upperLimit = 15;
+	const ssize_t lowerLimit = 16;
+	const ssize_t upperLimit = 16;
 
 	const ssize_t lowerGS = 8;
 	const ssize_t upperGS = 300;
@@ -50,6 +50,62 @@ void transposeCustomCounter(benchmark::State& state) {
 	state.counters["Matrix_height"] = (int)state.range(0);
 	state.counters["Matrix_width"] = (int)state.range(1);
 	state.counters["Tile_width"] = (int)state.range(2);
+}
+
+static void STL_Par_Unseq(benchmark::State& state){
+	pad::arrayDataV2<InValType> *data = nullptr;
+
+	if(useSerInit){
+		data = new pad::arrayDataV2<InValType>(state.range(0), state.range(1));
+	}
+	else{
+		data = new pad::arrayDataV2<InValType>(state.range(0), state.range(1), state.range(2), "TBB", dataPart);
+	}
+	
+	auto iterators = data->get_range();
+    auto [beginA, endA] = std::get<0>(iterators);
+    auto [beginB, endB] = std::get<1>(iterators);
+    auto [dataA, dataB] = data->get_ptr();
+
+	for (auto _ : state) {
+    	transpose::stl_each_cw(beginA, endA, beginB, state.range(0), std::execution::par_unseq);
+
+		benchmark::DoNotOptimize(dataB);
+		benchmark::ClobberMemory();
+	}
+	if(do_verify){
+		transpose::verifyPar(beginA, beginB, endB, state.range(0));
+	}
+	transposeCustomCounter(state);
+	delete data;
+}
+
+static void STL_Par(benchmark::State& state){
+	pad::arrayDataV2<InValType> *data = nullptr;
+
+	if(useSerInit){
+		data = new pad::arrayDataV2<InValType>(state.range(0), state.range(1));
+	}
+	else{
+		data = new pad::arrayDataV2<InValType>(state.range(0), state.range(1), state.range(2), "TBB", dataPart);
+	}
+	
+	auto iterators = data->get_range();
+    auto [beginA, endA] = std::get<0>(iterators);
+    auto [beginB, endB] = std::get<1>(iterators);
+    auto [dataA, dataB] = data->get_ptr();
+
+	for (auto _ : state) {
+    	transpose::stl_each_cw(beginA, endA, beginB, state.range(0), std::execution::par);
+
+		benchmark::DoNotOptimize(dataB);
+		benchmark::ClobberMemory();
+	}
+	if(do_verify){
+		transpose::verifyPar(beginA, beginB, endB, state.range(0));
+	}
+	transposeCustomCounter(state);
+	delete data;
 }
 
 static void TBB(benchmark::State& state){
@@ -278,14 +334,17 @@ static void hwLoc(benchmark::State& state){
 }
 
 
-BENCHMARK(TBB)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond)->Iterations(10);
-BENCHMARK(TBB_OMP_SIMD)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond)->Iterations(10);
-BENCHMARK(TBB_AVX)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond)->Iterations(10);
-BENCHMARK(hwLoc)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond)->Iterations(10);
+BENCHMARK(STL_Par)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);// ->Iterations(10);
+BENCHMARK(STL_Par_Unseq)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);// ->Iterations(10);
+
+BENCHMARK(TBB)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);// ->Iterations(10);
+BENCHMARK(TBB_OMP_SIMD)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
+BENCHMARK(TBB_AVX)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
+BENCHMARK(hwLoc)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
 
 // BENCHMARK(OMP)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond)->Iterations(10);
-BENCHMARK(OMP_Tiled)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond)->Iterations(10);
-BENCHMARK(OMP_Tiled_SIMD)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond)->Iterations(10);
-BENCHMARK(OMP_Tiled_AVX)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond)->Iterations(10);
+BENCHMARK(OMP_Tiled)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
+BENCHMARK(OMP_Tiled_SIMD)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
+BENCHMARK(OMP_Tiled_AVX)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
 
 BENCHMARK_MAIN();

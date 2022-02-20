@@ -6,4 +6,4 @@
 export OMP_PLACES=cores
 export OMP_PROC_BIND=true
 
-./build/computational-benchmark-rome8 --benchmark_out_format=json --benchmark_out=results/rome/COMP_all_Places8.json
+./memory-benchmark-rome --benchmark_out_format=json --benchmark_out=results/rome/COMP_all_Places8.json

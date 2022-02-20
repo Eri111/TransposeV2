@@ -55,6 +55,9 @@ int main(int argc, char const *argv[])
     // transpose::openMPSIMD(beginA, beginB, endB, in_rows, tile_width);
     // transpose::openMPIntrin(beginA, beginB, endB, in_rows, tile_width);
 
+    // transpose::stl_each_cr(beginA, endA, beginB, in_rows, std::execution::par_unseq);
+    transpose::stl_each_cw(beginA, endA, beginB, in_rows, std::execution::par_unseq);
+
     dataOMP.printB();
     // transpose::verifyT(beginA, beginB, endB, in_rows);
     transpose::verifyPar(beginA, beginB, endB, in_rows);
