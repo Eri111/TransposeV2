@@ -14,10 +14,26 @@ using InValType = float;
 
 #include "dataV2.hpp"
 #include "transpose.hpp"
+#include "iterator.hpp"
 
-static const size_t in_rows = 17;
-static const size_t in_cols = 15;
+static const size_t in_rows = 13;
+static const size_t in_cols = 14;
 static const size_t tile_width = 8;
+
+template <typename T>
+void printMat(T mat, size_t in_rows, size_t in_cols){
+    size_t out_rows = in_cols;
+    size_t out_cols = in_rows;
+    for (size_t y = 0; y < out_rows; y++)
+    {
+        for (size_t x = 0; x < out_cols; x++)
+        {
+            std::cout << std::setw(4) << mat[x + y*out_cols] << " ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+}
 
 int main(int argc, char const *argv[])
 {
@@ -56,11 +72,19 @@ int main(int argc, char const *argv[])
     // transpose::openMPIntrin(beginA, beginB, endB, in_rows, tile_width);
 
     // transpose::stl_each_cr(beginA, endA, beginB, in_rows, std::execution::par_unseq);
-    transpose::stl_each_cw(beginA, endA, beginB, in_rows, std::execution::par_unseq);
+    // transpose::stl_each_cw(beginA, endA, beginB, in_rows, std::execution::par_unseq);
+    
+    std::vector<bool, pad::default_init_allocator<bool>> out_mat(in_rows*in_cols);
+    std::fill(out_mat.begin(), out_mat.end(), 0);
+	pad::Arith_Iterator beginIter(0, [](ssize_t idx) { return (InValType)idx; });
 
-    dataOMP.printB();
+    transpose::C_openMPIntrin(beginIter, out_mat.begin(), out_mat.end(), in_rows, 8);
+
+    printMat(out_mat, in_rows, in_cols);
+
+    // dataOMP.printB();
     // transpose::verifyT(beginA, beginB, endB, in_rows);
-    transpose::verifyPar(beginA, beginB, endB, in_rows);
+    // transpose::verifyPar(beginA, beginB, endB, in_rows);
 
     // std::cout << "Hello World";
     return 0;

@@ -508,6 +508,129 @@ void openMPIntrin(InIter inStart, OutIter outStart, OutIter outEnd, const size_t
 }
 
 
+template <class InIter, class OutIter>
+void C_openMPIntrin(InIter inStart, OutIter outStart, OutIter outEnd, const size_t in_rows, size_t blocksize){
+    //blocksize can only be a multiple of 8
+    const size_t n_elem = std::distance(outStart, outEnd); 
+    const size_t in_columns = n_elem / in_rows;
+    using InElemType = typename std::iterator_traits<InIter>::value_type;
+    
+    #pragma omp parallel for schedule(TRANSPOSE_POLICY)                                 // related to Input Matrix:
+    for (size_t xx = blocksize; xx <= in_columns; xx += blocksize) {                    // outer loop from left to right
+        InElemType temp_in[64];
+        InElemType temp_out[64];
+        for (size_t yy = blocksize; yy <= in_rows; yy += blocksize) {                   // inner loop from top to bottom
+            for (size_t x = xx-blocksize; x < xx; x+=8){                //outer loop from left to right through block
+                for (size_t y = yy-blocksize; y < yy; y+=8){            //inner loop from top to bottom through block
+
+                    for(int loc_x = 0; loc_x<8; ++loc_x){
+                        for(int loc_y = 0; loc_y<8; ++loc_y){
+                            temp_in[loc_x + loc_y*8]=*(inStart + x+loc_x + (y+loc_y) * in_columns);
+                            // std::cout << temp_in[loc_x + loc_y*8] << " ";
+                        }
+                        // std::cout << std::endl;
+                    }
+                    // std::cout << std::endl;
+                    tran(temp_in, temp_out, 8, 8);
+
+                    for(int loc_x = 0; loc_x<8; ++loc_x){
+                        for(int loc_y = 0; loc_y<8; ++loc_y){
+                            // std::cout << temp_out[loc_x + loc_y*8] << " ";
+                            *(outStart + y+loc_x + (x+loc_y) * in_rows) = temp_out[loc_x + loc_y*8];
+                        }
+                        // std::cout << std::endl;
+                    }
+                    // std::cout << std::endl;
+                }
+                
+            }           
+        }
+    }
+
+    size_t restCols = in_columns % blocksize;
+    size_t restRows = in_rows % blocksize;
+
+    size_t restStartC = in_columns - restCols;
+    size_t restStartR = in_rows - restRows;
+
+    // calculate rest at North East (input)
+    #pragma omp parallel for schedule(TRANSPOSE_POLICY)
+    for (size_t x = restStartC; x < in_columns; ++x) {                   
+        for (size_t y = 0; y < in_rows; ++y) {           
+            *(outStart + (x * in_rows + y)) = *(inStart + (y * in_columns + x));
+        }
+    }
+
+    // calculate rest at South West (input)
+    #pragma omp parallel for schedule(TRANSPOSE_POLICY)
+    for (size_t x = 0; x < restStartC; ++x) {                   
+        for (size_t y = restStartR; y < in_rows; ++y) {          
+            *(outStart + (x * in_rows + y)) = *(inStart + (y * in_columns + x));
+        }
+    }
+}
+
+template <class InIter, class OutIter, class Partitioner>
+void C_tbbIntrin(InIter inStart, OutIter outStart, OutIter outEnd, const size_t in_rows, size_t gs, Partitioner& part){
+    const size_t n_elem = std::distance(outStart, outEnd); 
+    const size_t in_columns = n_elem / in_rows;
+    using InElemType = typename std::iterator_traits<InIter>::value_type;
+
+    oneapi::tbb::parallel_for(
+        oneapi::tbb::blocked_range2d<size_t>(0, in_rows, gs, 0, in_columns, gs),
+        [&](oneapi::tbb::blocked_range2d<size_t> r){
+            
+        size_t distRows = r.rows().end() - r.rows().begin();
+        size_t distCols = r.cols().end() - r.cols().begin();
+        size_t restRows = distRows % 8;
+        size_t restCols = distCols % 8;
+        auto restStartR = r.rows().end() - restRows;
+        auto restStartC = r.cols().end() - restCols;
+
+        InElemType temp_in[64];
+        InElemType temp_out[64];
+
+        // transpose regular 8x8 blocks
+        for(size_t x = r.cols().begin(); x + 8 <= r.cols().end(); x+=8){
+            for(size_t y = r.rows().begin(); y + 8 <= r.rows().end(); y+=8){            // y+8 < rows.end beacause we transpose 8x8 block in one iteration
+                for(int loc_x = 0; loc_x<8; ++loc_x){
+                    for(int loc_y = 0; loc_y<8; ++loc_y){
+                        temp_in[loc_x + loc_y*8]=*(inStart + x+loc_x + (y+loc_y) * in_columns);
+                        // std::cout << temp_in[loc_x + loc_y*8] << " ";
+                    }
+                    // std::cout << std::endl;
+                }
+                // std::cout << std::endl;
+                tran(temp_in, temp_out, 8, 8);
+                for(int loc_x = 0; loc_x<8; ++loc_x){
+                    for(int loc_y = 0; loc_y<8; ++loc_y){
+                        // std::cout << temp_out[loc_x + loc_y*8] << " ";
+                        *(outStart + y+loc_x + (x+loc_y) * in_rows) = temp_out[loc_x + loc_y*8];
+                    }
+                    // std::cout << std::endl;
+                }
+                // std::cout << std::endl;
+            }
+        }
+
+        // transpose rest at North East
+        for(size_t x = restStartC; x < r.cols().end(); ++x){
+            for(size_t y = 0; y < r.rows().end(); ++y){
+                *(outStart + (x * in_rows + y)) = *(inStart + (y * in_columns + x));
+            }
+        }
+
+        // transpose rest at South West
+        for(size_t x = 0; x < restStartC; ++x){
+            for(size_t y = restStartR; y < r.rows().end(); ++y){
+                *(outStart + (x * in_rows + y)) = *(inStart + (y * in_columns + x));
+            }
+        }
+    },part
+    );
+    
+}
+
 
 // template <class Iter1, class Iter2, class OutIter>
 // void simple_cp(Iter1 inBegin, Iter2 inEnd, OutIter outBegin){
@@ -569,4 +692,4 @@ void openMPIntrin(InIter inStart, OutIter outStart, OutIter outEnd, const size_t
 
 // }
 
-}
+} // end namespace transpose
