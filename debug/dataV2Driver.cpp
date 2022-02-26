@@ -74,11 +74,14 @@ int main(int argc, char const *argv[])
     // transpose::stl_each_cr(beginA, endA, beginB, in_rows, std::execution::par_unseq);
     // transpose::stl_each_cw(beginA, endA, beginB, in_rows, std::execution::par_unseq);
     
-    std::vector<bool, pad::default_init_allocator<bool>> out_mat(in_rows*in_cols);
+    std::vector<float, pad::default_init_allocator<float>> out_mat(in_rows*in_cols);
     std::fill(out_mat.begin(), out_mat.end(), 0);
 	pad::Arith_Iterator beginIter(0, [](ssize_t idx) { return (InValType)idx; });
 
-    transpose::C_openMPIntrin(beginIter, out_mat.begin(), out_mat.end(), in_rows, 8);
+    // transpose::tbb(beginIter, out_mat.begin(), out_mat.end(), in_rows, tile_width, transPart);
+    transpose::tbbSIMD(beginIter, out_mat.begin(), out_mat.end(), in_rows, tile_width, transPart);
+    // transpose::openMPSIMD(beginIter, out_mat.begin(), out_mat.end(), in_rows, tile_width);
+    // transpose::C_openMPIntrin(beginIter, out_mat.begin(), out_mat.end(), in_rows, 8);
 
     printMat(out_mat, in_rows, in_cols);
 

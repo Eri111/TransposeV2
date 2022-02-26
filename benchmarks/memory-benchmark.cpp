@@ -5,10 +5,10 @@
 #define DATA_POLICY static
 #define TRANSPOSE_POLICY static
 
-using DataPartitioner = oneapi::tbb::simple_partitioner;
+using DataPartitioner = oneapi::tbb::static_partitioner;
 static DataPartitioner dataPart;
 
-using TransposePartitioner = oneapi::tbb::simple_partitioner;
+using TransposePartitioner = oneapi::tbb::static_partitioner;
 static TransposePartitioner transPart;
 
 using InValType = float;
@@ -21,6 +21,8 @@ using InValType = float;
 // constexpr size_t simd_width = 32;
 constexpr bool useSerInit = false;
 constexpr bool do_verify = false;
+
+constexpr size_t avx_gs = 64;
 
 
 // bool floatEquals(double lhs, double rhs, double epsilon = 1e-5) {
@@ -199,7 +201,7 @@ static void TBB_AVX(benchmark::State& state){
 		data = new pad::arrayDataV2<InValType>(state.range(0), state.range(1));
 	}
 	else{
-		data = new pad::arrayDataV2<InValType>(state.range(0), state.range(1), state.range(2), "TBB", dataPart);
+		data = new pad::arrayDataV2<InValType>(state.range(0), state.range(1), avx_gs, "TBB", dataPart);
 	}
 	
 	auto iterators = data->get_range();
@@ -208,7 +210,7 @@ static void TBB_AVX(benchmark::State& state){
     auto [dataA, dataB] = data->get_ptr();
 
 	for (auto _ : state) {
-		transpose::tbbIntrin(beginA, beginB, endB, state.range(0), state.range(2), transPart);
+		transpose::tbbIntrin(beginA, beginB, endB, state.range(0), avx_gs, transPart);
 		
 		benchmark::DoNotOptimize(dataB);
 		benchmark::ClobberMemory();
@@ -311,7 +313,7 @@ static void OMP_Tiled_AVX(benchmark::State& state){
 		data = new pad::arrayDataV2<InValType>(state.range(0), state.range(1));
 	}
 	else{
-		data = new pad::arrayDataV2<InValType>(state.range(0), state.range(1), state.range(2), "OMP");
+		data = new pad::arrayDataV2<InValType>(state.range(0), state.range(1), avx_gs, "OMP");
 	}
 	
 	auto iterators = data->get_range();
@@ -320,7 +322,7 @@ static void OMP_Tiled_AVX(benchmark::State& state){
     auto [dataA, dataB] = data->get_ptr();
 
 	for (auto _ : state) {
-		transpose::openMPIntrin(beginA, beginB, endB, state.range(0), state.range(2));
+		transpose::openMPIntrin(beginA, beginB, endB, state.range(0), avx_gs);
 		
 		benchmark::DoNotOptimize(dataB);
 		benchmark::ClobberMemory();
@@ -361,16 +363,16 @@ static void hwLoc(benchmark::State& state){
 	delete [] data_out;
 }
 
-BENCHMARK(Serial)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);// ->Iterations(10);
-BENCHMARK(STL_Par)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);// ->Iterations(10);
-BENCHMARK(STL_Par_Unseq)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);// ->Iterations(10);
+// BENCHMARK(Serial)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);// ->Iterations(10);
+// BENCHMARK(STL_Par)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);// ->Iterations(10);
+// BENCHMARK(STL_Par_Unseq)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);// ->Iterations(10);
 
 BENCHMARK(TBB)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);// ->Iterations(10);
 BENCHMARK(TBB_OMP_SIMD)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
 BENCHMARK(TBB_AVX)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
-BENCHMARK(hwLoc)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
+// BENCHMARK(hwLoc)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
 
-BENCHMARK(OMP)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond)->Iterations(10);
+BENCHMARK(OMP)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
 BENCHMARK(OMP_Tiled)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
 BENCHMARK(OMP_Tiled_SIMD)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
 BENCHMARK(OMP_Tiled_AVX)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
