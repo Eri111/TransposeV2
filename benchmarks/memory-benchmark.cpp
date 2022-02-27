@@ -21,13 +21,7 @@ using InValType = float;
 // constexpr size_t simd_width = 32;
 constexpr bool useSerInit = false;
 constexpr bool do_verify = false;
-
 constexpr size_t avx_gs = 64;
-
-
-// bool floatEquals(double lhs, double rhs, double epsilon = 1e-5) {
-//     return std::abs(lhs - rhs) < epsilon;
-// }
 
 static void BenchmarkArguments(benchmark::internal::Benchmark* b) {
 	const ssize_t lowerLimit = 5;
@@ -39,9 +33,7 @@ static void BenchmarkArguments(benchmark::internal::Benchmark* b) {
 	{	
 		for (auto i = lowerLimit; i <= upperLimit; ++i)
 		{
-			// b->Args({(2*i), (i), (j)}); // first arg in_rows (Spalten ANZAHL), second arg in_columns
-			b->Args({(1 << i), (1 << i), (j)}); // first arg in_rows (Spalten ANZAHL), second arg in_columns
-			// b->Args({(i), (i), (j)}); // first arg in_rows (Spalten ANZAHL), second arg in_columns
+			b->Args({(1 << i), (1 << i), (j)}); // first arg in_rows (Zeilen ANZAHL), second arg in_columns
 		}
 	}
 }
@@ -363,18 +355,18 @@ static void hwLoc(benchmark::State& state){
 	delete [] data_out;
 }
 
-// BENCHMARK(Serial)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);// ->Iterations(10);
-// BENCHMARK(STL_Par)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);// ->Iterations(10);
-// BENCHMARK(STL_Par_Unseq)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);// ->Iterations(10);
+BENCHMARK(Serial)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);
+BENCHMARK(STL_Par)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);
+BENCHMARK(STL_Par_Unseq)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);
 
-BENCHMARK(TBB)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);// ->Iterations(10);
-BENCHMARK(TBB_OMP_SIMD)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
-BENCHMARK(TBB_AVX)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
-// BENCHMARK(hwLoc)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
+BENCHMARK(TBB)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);
+BENCHMARK(TBB_OMP_SIMD)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);
+BENCHMARK(TBB_AVX)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); 
+BENCHMARK(hwLoc)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);
 
-BENCHMARK(OMP)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
-BENCHMARK(OMP_Tiled)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
-BENCHMARK(OMP_Tiled_SIMD)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
-BENCHMARK(OMP_Tiled_AVX)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
+BENCHMARK(OMP)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); 
+BENCHMARK(OMP_Tiled)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); 
+BENCHMARK(OMP_Tiled_SIMD)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); 
+BENCHMARK(OMP_Tiled_AVX)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); 
 
 BENCHMARK_MAIN();

@@ -52,6 +52,7 @@ class arrayDataV2 {
         arrayDataV2(const arrayDataV2&) = delete;
         arrayDataV2(arrayDataV2&&) = delete;
         arrayDataV2() = delete;
+
         // Serial Constructor
         explicit arrayDataV2(size_t in_rows,
                              size_t in_columns)
@@ -191,8 +192,4 @@ void arrayDataV2<T>::printB(){
     }
     std::cout << std::endl;
 }
-
-
-
 } // namespace pad
-

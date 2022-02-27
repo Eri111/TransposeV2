@@ -49,7 +49,7 @@ void alloc_mem_per_node(hwloc_topology_t topo, float** data_in, float** data_out
         float *A = data_in[i];
 
         float *B = nullptr;
-        if(i == 0 || i == 3){
+        if(i == 0 || i == 3){       // allocate memory per NUMA node, input[1] and output [2] (also input[2] and output[1]) are allocated and initialized on the same node 
             data_out[i] = (float *) hwloc_alloc_membind(topo, size * sizeof(float), numa_node->nodeset, HWLOC_MEMBIND_BIND, HWLOC_MEMBIND_BYNODESET);
             B = data_out[i];
         }
@@ -100,7 +100,6 @@ void alloc_thr_per_node(hwloc_topology_t topo, float** data_in, float** data_out
                     [&](const tbb::blocked_range2d<size_t>& r){
                         for(size_t x = r.cols().begin(); x + 8 <= r.cols().end(); x+=8){
                             for(size_t y = r.rows().begin(); y + 8 <= r.rows().end(); y+=8){
-                                //B[x * sub_width + y] = A[y * sub_width + x];
                                 tran(&A[y * sub_width + x], &B[x * sub_width + y], sub_width, sub_width);
                             }
                         }

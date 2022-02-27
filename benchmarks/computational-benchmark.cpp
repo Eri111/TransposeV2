@@ -24,11 +24,6 @@ constexpr bool useSerInit = true;
 constexpr bool do_verify = false;
 constexpr size_t avx_gs = 128;
 
-
-// bool floatEquals(double lhs, double rhs, double epsilon = 1e-5) {
-//     return std::abs(lhs - rhs) < epsilon;
-// }
-
 static void BenchmarkArguments(benchmark::internal::Benchmark* b) {
 	const ssize_t lowerLimit = 5;
 	const ssize_t upperLimit = 15;
@@ -39,9 +34,7 @@ static void BenchmarkArguments(benchmark::internal::Benchmark* b) {
 	{	
 		for (auto i = lowerLimit; i <= upperLimit; ++i)
 		{
-			// b->Args({(2*i), (i), (j)}); // first arg in_rows (Spalten ANZAHL), second arg in_columns
-			b->Args({(1 << i), (1 << i), (j)}); // first arg in_rows (Spalten ANZAHL), second arg in_columns
-			// b->Args({(i), (i), (j)}); // first arg in_rows (Spalten ANZAHL), second arg in_columns
+			b->Args({(1 << i), (1 << i), (j)}); // first arg in_rows (Zeilen ANZAHL), second arg in_columns
 		}
 	}
 }
@@ -70,7 +63,6 @@ static void Serial(benchmark::State& state){
 
 	for (auto _ : state) {
 		transpose::transposeSerial(beginA, beginB, endB, state.range(0));
-
 		
 		benchmark::ClobberMemory();
 	}
@@ -97,7 +89,6 @@ static void STL_Par(benchmark::State& state){
 
 	for (auto _ : state) {
     	transpose::stl_each_cw(beginA, endA, beginB, state.range(0), std::execution::par);
-
 		
 		benchmark::ClobberMemory();
 	}
@@ -124,7 +115,6 @@ static void STL_Par_Unseq(benchmark::State& state){
 
 	for (auto _ : state) {
     	transpose::stl_each_cw(beginA, endA, beginB, state.range(0), std::execution::par_unseq);
-
 		
 		benchmark::ClobberMemory();
 	}
@@ -151,8 +141,7 @@ static void TBB(benchmark::State& state){
 
 	for (auto _ : state) {
 		transpose::tbb(beginA, beginB, endB, state.range(0), state.range(2), transPart);
-
-		
+	
 		benchmark::ClobberMemory();
 	}
 	if(do_verify){
@@ -178,8 +167,7 @@ static void TBB_OMP_SIMD(benchmark::State& state){
 
 	for (auto _ : state) {
 		transpose::tbbSIMD(beginA, beginB, endB, state.range(0), state.range(2), transPart);
-		
-		
+				
 		benchmark::ClobberMemory();
 	}
 	if(do_verify){
@@ -205,8 +193,7 @@ static void TBB_AVX(benchmark::State& state){
 
 	for (auto _ : state) {
 		transpose::C_tbbIntrin(beginA, beginB, endB, state.range(0), avx_gs, transPart);
-		
-		
+			
 		benchmark::ClobberMemory();
 	}
 	if(do_verify){
@@ -232,8 +219,7 @@ static void OMP(benchmark::State& state){
 
 	for (auto _ : state) {
 		transpose::openMP(beginA, beginB, endB, state.range(0));
-		
-		
+				
 		benchmark::ClobberMemory();
 	}
 	if(do_verify){
@@ -259,8 +245,7 @@ static void OMP_Tiled(benchmark::State& state){
 
 	for (auto _ : state) {
 		transpose::openMPTiled(beginA, beginB, endB, state.range(0), state.range(2));
-		
-		
+				
 		benchmark::ClobberMemory();
 	}
 	if(do_verify){
@@ -286,8 +271,7 @@ static void OMP_Tiled_SIMD(benchmark::State& state){
 
 	for (auto _ : state) {
 		transpose::openMPSIMD(beginA, beginB, endB, state.range(0), state.range(2));
-		
-		
+			
 		benchmark::ClobberMemory();
 	}
 	if(do_verify){
@@ -313,8 +297,7 @@ static void OMP_Tiled_AVX(benchmark::State& state){
 
 	for (auto _ : state) {
 		transpose::C_openMPIntrin(beginA, beginB, endB, state.range(0), avx_gs);
-		
-		
+				
 		benchmark::ClobberMemory();
 	}
 	if(do_verify){
@@ -324,17 +307,15 @@ static void OMP_Tiled_AVX(benchmark::State& state){
 	delete data;
 }
 
-BENCHMARK(Serial)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);// ->Iterations(10);
-BENCHMARK(STL_Par)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);// ->Iterations(10);
-BENCHMARK(STL_Par_Unseq)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);// ->Iterations(10);
+BENCHMARK(Serial)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);
+BENCHMARK(STL_Par)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);
+BENCHMARK(STL_Par_Unseq)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);
 
-BENCHMARK(TBB)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);// ->Iterations(10);
-BENCHMARK(TBB_OMP_SIMD)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
-BENCHMARK(TBB_AVX)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
-// BENCHMARK(hwLoc)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
-
-BENCHMARK(OMP)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
-BENCHMARK(OMP_Tiled)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
-BENCHMARK(OMP_Tiled_SIMD)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
-BENCHMARK(OMP_Tiled_AVX)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); //->Iterations(10);
+BENCHMARK(TBB)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond);
+BENCHMARK(TBB_OMP_SIMD)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); 
+BENCHMARK(TBB_AVX)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); 
+BENCHMARK(OMP)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); 
+BENCHMARK(OMP_Tiled)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); 
+BENCHMARK(OMP_Tiled_SIMD)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); 
+BENCHMARK(OMP_Tiled_AVX)->Apply(BenchmarkArguments)->UseRealTime()->Unit(benchmark::kMicrosecond); 
 BENCHMARK_MAIN(); 
